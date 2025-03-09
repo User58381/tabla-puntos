@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabla de Puntos</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
+        body {
+            font-family: 'Comic Neue', cursive;
+            text-align: center;
+            background: url('./imagenes/fondo.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+        }
+        table {
+            width: 80%;
+            margin: auto;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.9);
+            color: black;
+            font-size: 18px;
+        }
+        th, td {
+            padding: 10px;
+            border: 2px solid black;
+            text-align: center;
+        }
+        th {
+            background: gold;
+        }
+        .estrella-10 {
+            animation: glow 1s infinite alternate;
+            filter: drop-shadow(0 0 5px yellow);
+        }
+        .estrella-30 {
+            font-size: 30px;
+            animation: glowBig 1s infinite alternate;
+            filter: drop-shadow(0 0 10px gold);
+        }
+        @keyframes glow {
+            0% { text-shadow: 0 0 5px yellow; transform: scale(1); }
+            100% { text-shadow: 0 0 15px yellow; transform: scale(1.2); }
+        }
+        @keyframes glowBig {
+            0% { text-shadow: 0 0 10px gold; transform: scale(1); }
+            100% { text-shadow: 0 0 25px gold; transform: scale(1.3); }
+        }
+        #buscador {
+            width: 60%;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            border: 2px solid black;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tabla de Puntos</h1>
+    <input type="text" id="buscador" placeholder="Buscar alumno..." onkeyup="filtrarAlumnos()">
+    <table>
+        <thead>
+            <tr>
+                <th>Alumno</th>
+                <th>Puntos</th>
+                <th>Rango</th>
+                <th>Recompensas</th>
+            </tr>
+        </thead>
+        <tbody id="tablaPuntos">
+            <tr><td colspan="4">Cargando datos...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        function limpiarNombre(valor) {
+            if (typeof valor === 'string' && valor.startsWith("Date(")) {
+                return "Sin nombre";
+            }
+            return valor || "Sin nombre";
+        }
+
+        async function cargarPuntos() {
+            const sheetId = "1RrXV3mI1qiFnA_GSsH9yB3AfN6OlVtGNrSwlmTf_k34";
+            const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                const json = JSON.parse(text.substring(47, text.length - 2));
+                const rows = json.table.rows;
+                console.log("Datos recibidos de Google Sheets:", rows);
+                const tabla = document.getElementById("tablaPuntos");
+                tabla.innerHTML = "";
+
+                if (!rows.length) {
+                    tabla.innerHTML = `<tr><td colspan='4'>No hay datos disponibles</td></tr>`;
+                    return;
+                }
+
+                rows.forEach(row => {
+                    let nombre = limpiarNombre(row.c[0]?.v);
+                    let puntos = row.c[1]?.v ? parseInt(row.c[1].v) * 10 : 0;
+                    let rango = "";
+                    let recompensa = "";
+
+                    if (puntos >= 50) {
+                        rango = "🔴 Gran Maestro";
+                    } else if (puntos >= 40) {
+                        rango = "🟠 Maestro";
+                    } else if (puntos >= 30) {
+                        rango = "🟣 Experto";
+                    } else if (puntos >= 20) {
+                        rango = "🔵 Avanzado";
+                    } else if (puntos >= 10) {
+                        rango = "🟢 Trabajador";
+                    } else {
+                        rango = "⚪ Sin rango";
+                    }
+
+                    let numEstrellas = Math.floor(puntos / 10);
+                    let estrellasGrandes = Math.floor(numEstrellas / 3);
+                    let estrellasPequeñas = numEstrellas % 3;
+                    
+                    for (let i = 0; i < estrellasGrandes; i++) {
+                        recompensa += "<span class='estrella-30'>🌟</span>";
+                    }
+                    for (let i = 0; i < estrellasPequeñas; i++) {
+                        recompensa += "<span class='estrella-10'>⭐</span>";
+                    }
+                    
+                    let fila = `<tr class='fila-alumno'>
+                        <td>${nombre}</td>
+                        <td>${puntos}</td>
+                        <td>${rango}</td>
+                        <td>${recompensa}</td>
+                    </tr>`;
+                    tabla.innerHTML += fila;
+                });
+            } catch (error) {
+                console.error("Error al cargar los datos:", error);
+                document.getElementById("tablaPuntos").innerHTML = `<tr><td colspan='4'>Error al cargar los datos. Verifique la conexión.</td></tr>`;
+            }
+        }
+
+        function filtrarAlumnos() {
+            let input = document.getElementById("buscador").value.toLowerCase();
+            let filas = document.getElementsByClassName("fila-alumno");
+            
+            for (let i = 0; i < filas.length; i++) {
+                let nombre = filas[i].getElementsByTagName("td")[0].textContent.toLowerCase();
+                if (nombre.includes(input)) {
+                    filas[i].style.display = "";
+                } else {
+                    filas[i].style.display = "none";
+                }
+            }
+        }
+
+        cargarPuntos();
+    </script>
+</body>
+</html>
